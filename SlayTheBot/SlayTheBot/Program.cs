@@ -25,6 +25,11 @@ namespace SlayTheBot
         public Dictionary<long?, UserState> _states = new Dictionary<long?, UserState>();
         public List<Tournament> _tournaments = new List<Tournament>();
 
+        public string tName;
+        public int tMaxParticipants;
+        public int tPrice;
+        public int tId;
+
         public Host(string token)
         {
             bot = new TelegramBotClient(token);
@@ -44,13 +49,27 @@ namespace SlayTheBot
 
         private async Task UpdateHandler(ITelegramBotClient client, Update update, CancellationToken token)
         {
-                var message = update.Message;
-                if (message is { Text: { } text })
+            var message = update.Message;
+            long? chatId = update.Message?.Chat.Id ?? update.CallbackQuery?.Message?.Chat.Id;
+
+            if (!_states.TryGetValue(chatId, out var state))
+            {
+                state = new UserState();
+                _states[message?.Chat.Id] = state;
+                Console.WriteLine($"new user: {message?.From}");
+                if (chatId == 1369750317)
                 {
-                    var chatId = update.Message?.Chat.Id;
+                    state.isAdmin = true;
+                }
+            }
+
+            if (message is { Text: { } text })
+                {
+                    Console.WriteLine($"new message from {message.From}: {text}");
+
                     if (text == "/start")
                     {
-                        await bot.SendMessage(chatId, "Привет!" +
+                    await bot.SendMessage(chatId, "Привет!" +
                             "\nЯ чат бот для регистрации на турниры.\nНажми 'Список активных турниров' ниже и выбери турнир, на который хочешь приобрести слот." +
                             "\nДальше я подскажу всю нужную информацию и дам все необходимые данные для участия." +
                             "\nЕсли есть тупой или умный вопрос - /support ;)"
@@ -59,23 +78,66 @@ namespace SlayTheBot
                     [("Правила"), ("Что такое Quack Brawl")],
                     [("Список активных турниров"), ("Поддержка")]
                         });
+                    return;
                     }
-                    else if (text == "/help")
+                else if (text == "/help")
+                {
+                    if (state.isAdmin)
                     {
                         await bot.SendMessage(chatId, "Here is the guide",
                             replyMarkup: new InlineKeyboardButton("Repository Link", "https://github.com/TelegramBots/Telegram.Bot"));
                     }
+                    else
+                    {
+                        await bot.SendMessage(chatId, "nope");
+                    }
                     return;
                 }
+                else if(text == "/create_T" && state.isAdmin)
+                {
+                    await bot.SendMessage(chatId, "send the tournament name");
+                    state.isWaitingForTournamentName = true;
+                }
+                else if(text != null && state.isWaitingForTournamentName)
+                {
+                    state.isWaitingForTournamentName = false;
+                    tName = text;
+                    state.isWaitingForMaxParticipants = true;
+                    await bot.SendMessage(chatId, "set the max participants count");
+                }
+                else if (text != null && state.isWaitingForMaxParticipants)
+                {
+                    state.isWaitingForMaxParticipants = false;
+                    tMaxParticipants = Convert.ToInt32(text);
+                    state.isWaitingForTournamentPrice = true;
+                    await bot.SendMessage(chatId, "set the tournament price");
+                }
+                else if (text != null && state.isWaitingForTournamentPrice)
+                {
+                    state.isWaitingForTournamentPrice = false;
+                    tPrice = Convert.ToInt32(text);
+                    state.isWaitingForTournamentId = true;
+                    await bot.SendMessage(chatId, "set the tournament id");
+                }
+                else if(text != null && state.isWaitingForTournamentId)
+                {
+                    state.isWaitingForTournamentId = false;
+                    tId = Convert.ToInt32(text);
+                    Tournament tournament = new Tournament(tName, tMaxParticipants, tPrice, tId);
+                    _tournaments.Add(tournament);
+                    await bot.SendMessage(chatId, "Great! The tournament has been created.\n/create_T");
+                }
+
+            }
 
                 else if (update is { CallbackQuery: { } cbQuery })
                 {
                     var messageData = cbQuery.Data;
-                    var cbChatId = cbQuery.Message?.Chat.Id;
+                    Console.WriteLine(messageData);
 
                     if (messageData == "Правила")
                     {
-                        await bot.SendMessage(cbChatId, "ОБЯЗАТЕЛЬНО К ПРОЧТЕНИЮ!\n Предложения и критика приветствуются - /support." +
+                        await bot.SendMessage(chatId, "ОБЯЗАТЕЛЬНО К ПРОЧТЕНИЮ!\n Предложения и критика приветствуются - /support." +
                             "\n1. Использование багов запрещено." +
                             "\n2. Неуважительное поведение в адрес других участников, организаторов, а также оскорбления и токсичность в чатах являются основанием для исключения из турнира без возврата взноса." +
                             "\n3. Слот на турнир считается забронированным только после 100% предоплаты. Это гарантирует честный набор и ответственность участников." +
@@ -89,7 +151,7 @@ namespace SlayTheBot
                     }
                     else if (messageData == "Что такое Quack Brawl")
                     {
-                        await bot.SendMessage(cbChatId, "Мой новый проект, в который я верю!\nМоя цель — это узнать, на что я способен, и, конечно, провести классные и справедливые турниры по классной игре!\nБуду рад, если получится организовать хоть один турнир, спасибо!");
+                        await bot.SendMessage(chatId, "Мой новый проект, в который я верю!\nМоя цель — это узнать, на что я способен, и, конечно, провести классные и справедливые турниры по классной игре!\nБуду рад, если получится организовать хоть один турнир, спасибо!");
                     }
                     else if (messageData == "Список активных турниров")
                     {
@@ -97,19 +159,26 @@ namespace SlayTheBot
                         {
                             foreach (var i in _tournaments)
                             {
-                                await bot.SendMessage(cbChatId, i.name);
+                                await bot.SendMessage(chatId, $"{i.name}.\nЧисло участников: {i.maxParticipants}\nЦена: {i.price} Бел. руб.\nID турнира: {i.tId}", replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Зарегистрироваться", $"reg {i.tId}")));
                             }
                         }
                         else
                         {
-                            await bot.SendMessage(cbChatId, "Извините, пока нет доступных турниров! Проверьте позже.");
+                            await bot.SendMessage(chatId, "Извините, пока нет доступных турниров! Проверьте позже.");
                         }
                     }
-                    else if (messageData == "Поддержка")
-                    {
-                        await bot.SendMessage(cbChatId, "Вызови /support");
-                    }
-            }
+                else if (messageData == "Поддержка")
+                {
+                    await bot.SendMessage(chatId, "Вызови /support");
+                }
+                else if(messageData.StartsWith("reg"))
+                {
+                    await bot.SendMessage(chatId, "Выберите способ оплаты", replyMarkup: new InlineKeyboardButton[][] {
+                    [("Перевод на карту"), ("ЕРИП")],
+                    [("Телеграм Звёзды"), ("Предметы Steam")]
+                        });
+                }
+                }
         }
     }
     class Tournament
@@ -118,13 +187,15 @@ namespace SlayTheBot
         public int participantCount = 0;
         public int maxParticipants = 10;
         public int price;
+        public int tId;
         public Dictionary<string, long?> _participants = new Dictionary<string, long?>();
 
-        public Tournament(string name, int maxParticipants, int price)
+        public Tournament(string name, int maxParticipants, int price, int tId)
         {
             this.name = name;
             this.maxParticipants = maxParticipants;
             this.price = price;
+            this.tId = tId;
         }
     }
 }
