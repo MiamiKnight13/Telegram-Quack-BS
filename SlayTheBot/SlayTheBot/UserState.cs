@@ -11,4 +11,9 @@ class UserState
     public bool isWaitingForMaxParticipants { get; set; }
     public bool isWaitingForTournamentPrice { get; set; }
     public bool isWaitingForTournamentId { get; set; }
+    public int IdToReg {  get; set; }
+    public bool isWaitingForTIDToAdd { get; set; }
+    public long? IdToAdd { get; set; }
+    public int TIdToAdd { get; set; }
+    public bool isWaitingForIdToAdd { get; set; }
 }

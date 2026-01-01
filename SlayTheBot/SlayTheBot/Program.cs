@@ -98,7 +98,33 @@ namespace SlayTheBot
                     await bot.SendMessage(chatId, "send the tournament name");
                     state.isWaitingForTournamentName = true;
                 }
-                else if(text != null && state.isWaitingForTournamentName)
+                else if(text == "/add_par" && state.isAdmin)
+                {
+                    await bot.SendMessage(chatId, "send the user id you want to add");
+                    state.isWaitingForIdToAdd = true;
+                }
+                else if(text != null && state.isWaitingForIdToAdd)
+                {
+                    state.isWaitingForIdToAdd = false;
+                    state.IdToAdd = Convert.ToInt64(text);
+                    state.isWaitingForTIDToAdd = true;
+                    await bot.SendMessage(chatId, "send the tournament id");
+                }
+                else if (text != null && state.isWaitingForTIDToAdd)
+                {
+                    state.isWaitingForTIDToAdd = false;
+                    state.TIdToAdd = Convert.ToInt32(text);
+                    foreach (var i in _tournaments)
+                    {
+                        if (state.TIdToAdd == i.tId)
+                        {
+                            i._participants.Add(state.IdToAdd);
+                            Console.WriteLine($"new participant: {state.IdToAdd} in tournament {state.TIdToAdd}");
+                            break;
+                        }
+                    }
+                }
+                else if (text != null && state.isWaitingForTournamentName)
                 {
                     state.isWaitingForTournamentName = false;
                     tName = text;
@@ -119,7 +145,7 @@ namespace SlayTheBot
                     state.isWaitingForTournamentId = true;
                     await bot.SendMessage(chatId, "set the tournament id");
                 }
-                else if(text != null && state.isWaitingForTournamentId)
+                else if (text != null && state.isWaitingForTournamentId)
                 {
                     state.isWaitingForTournamentId = false;
                     tId = Convert.ToInt32(text);
@@ -147,11 +173,22 @@ namespace SlayTheBot
                             "\n   б) Переносим турнир на небольшой срок, пока не наберётся нужное количество участников." +
                             "\n   в) По вашему желанию, мы можем сразу перезаписать вас на другой турнир бесплатно." +
                             "\n   г) Возврат 100% взноса всем зарегистрированным участникам." +
-                            "\n6. Способы оплаты взноса:\n  1. Перевод на карту (рекомендуется)\r\nВы можете перевести сумму с карты ЛЮБОГО белорусского банка (Приорбанк, МТБанк, Альфа-Банк, БПС-Сбербанк и др.) на нашу карту Беларусбанка.\r\nРеквизиты: Номер карты: XXXX XXXX XXXX 1234\r\n   В комментарии укажите ваш игровой ник!\r\n\r\n2.  Через систему ЕРИП (по номеру телефона, привязанного к нашей карте).\r\n\r\n3.  С помощью Stars через бота.\r\n\r\n4.  С помощью предметов в Steam.");
+                            "\n6. Способы оплаты взноса:" +
+                            "\n   а) Перевод на карту (рекомендуется)\nВы можете перевести сумму с карты ЛЮБОГО белорусского банка на нашу карту Беларусбанка." +
+                            "\n   б) Через систему ЕРИП (по номеру телефона, привязанного к нашей карте)." +
+                            "\n   в) С помощью Stars через бота.", replyMarkup: new InlineKeyboardButton[][]
+                        {
+                    [("Правила"), ("Что такое Quack Brawl")],
+                    [("Список активных турниров"), ("Поддержка")]
+                        });
                     }
                     else if (messageData == "Что такое Quack Brawl")
                     {
-                        await bot.SendMessage(chatId, "Мой новый проект, в который я верю!\nМоя цель — это узнать, на что я способен, и, конечно, провести классные и справедливые турниры по классной игре!\nБуду рад, если получится организовать хоть один турнир, спасибо!");
+                        await bot.SendMessage(chatId, "Мой новый проект, в который я верю!\nМоя цель — это узнать, на что я способен, и, конечно, провести классные и справедливые турниры по классной игре!\nБуду рад, если получится организовать хоть один турнир, спасибо!", replyMarkup: new InlineKeyboardButton[][]
+                        {
+                    [("Правила"), ("Что такое Quack Brawl")],
+                    [("Список активных турниров"), ("Поддержка")]
+                        });
                     }
                     else if (messageData == "Список активных турниров")
                     {
@@ -164,18 +201,31 @@ namespace SlayTheBot
                         }
                         else
                         {
-                            await bot.SendMessage(chatId, "Извините, пока нет доступных турниров! Проверьте позже.");
+                            await bot.SendMessage(chatId, "Извините, пока нет доступных турниров! Проверьте позже.", replyMarkup: new InlineKeyboardButton[][] { [("Правила"), ("Что такое Quack Brawl")], [("Список активных турниров"), ("Поддержка")] });
                         }
                     }
                 else if (messageData == "Поддержка")
                 {
-                    await bot.SendMessage(chatId, "Вызови /support");
+                    await bot.SendMessage(chatId, "Вызови /support", replyMarkup: new InlineKeyboardButton[][] { [("Правила"), ("Что такое Quack Brawl")], [("Список активных турниров"), ("Поддержка")] });
                 }
                 else if(messageData.StartsWith("reg"))
                 {
                     await bot.SendMessage(chatId, "Выберите способ оплаты", replyMarkup: new InlineKeyboardButton[][] {
                     [("Перевод на карту"), ("ЕРИП")],
-                    [("Телеграм Звёзды"), ("Предметы Steam")]
+                    [("Телеграм Звёзды")]
+                        });
+                }
+                else if(messageData == "Перевод на карту")
+                {
+                    int code = new Random().Next(1000, 9999);
+                    await bot.SendMessage(chatId, $"Номер карты: 9112 3800 5670 1230 (Белорусбанк)\n\nВ комментарии к платежу укажите этот одноразовый код: {code}\n\nПосле оплаты отправьте скриншот успешного перевода денег в лс @VERT1GO51 и нажмите кнопку ниже. Дальше ожидайте подтверждения. Спасибо." 
+                        , replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Оплатил и отправил скриншот!")));
+                }
+                else if(messageData == "ЕРИП" || messageData == "Телеграм Звёзды")
+                {
+                    await bot.SendMessage(chatId, "Извините, на данный момент этот способ оплаты не доступен", replyMarkup: new InlineKeyboardButton[][] {
+                        [("Перевод на карту"), ("ЕРИП")],
+                    [("Телеграм Звёзды")]
                         });
                 }
                 }
@@ -188,7 +238,7 @@ namespace SlayTheBot
         public int maxParticipants = 10;
         public int price;
         public int tId;
-        public Dictionary<string, long?> _participants = new Dictionary<string, long?>();
+        public List<long?> _participants = new List<long?>();
 
         public Tournament(string name, int maxParticipants, int price, int tId)
         {
