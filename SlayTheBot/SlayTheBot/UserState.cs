@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SlayTheBot;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,17 +7,24 @@ using System.Threading.Tasks;
 
 class UserState
 {
+    //available for users
     public bool isAdmin {  get; set; }
+    public bool isWaitingForSupportMessage { get; set; }
+    public Tournament TournamentToReg {  get; set; }
+    public int TIDToReg { get; set; }
+
+    //not available for users
     public bool isWaitingForTournamentName { get; set; }
     public bool isWaitingForMaxParticipants { get; set; }
     public bool isWaitingForTournamentPrice { get; set; }
+    public bool isWaitingForTournamentStarPrice { get; set; }
+    public string TournamentStarPrice { get; set;}
     public bool isWaitingForTournamentId { get; set; }
-    public bool isWaitingForTIDToAdd { get; set; }
-    public long? IdToAdd { get; set; }
-    public int TIdToAdd { get; set; }
-    public bool isWaitingForIdToAdd { get; set; }
-    public bool isWaitingForSupportMessage { get; set; }
-    public bool isWaitingForTIdToRemove { get; set; }
+    public bool isWaitingForTIDToAddPar { get; set; }
+    public int TIdToAddPar { get; set; }
+    public bool isWaitingForIdToAddInTournament { get; set; }
+    public long? IdToAddInTournament { get; set; }
+    public bool isWaitingForTIdToDelete { get; set; }
     public int MessageCode { get; set; }
     public bool isWaitingForTIdToCheckList { get; set; }
     public bool isWaitingForMessageToSendToAllParticipants { get; set; }
