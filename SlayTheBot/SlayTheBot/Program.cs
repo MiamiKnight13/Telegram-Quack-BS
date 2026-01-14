@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.Payments;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -26,6 +27,8 @@ namespace SlayTheBot
         TelegramBotClient bot;
         public Dictionary<long?, UserState> _states = new Dictionary<long?, UserState>();
         public List<Tournament> _tournaments = new List<Tournament>();
+
+        Message confirmMessage;
 
         public string tName;
         public int tMaxParticipants;
@@ -69,6 +72,7 @@ namespace SlayTheBot
         private async Task ExcrptionHandler(ITelegramBotClient client, Exception exception, HandleErrorSource source, CancellationToken token)
         { 
             Console.WriteLine(exception.Message);
+            //await bot.SendMessage(OwnerId, exception.Message);
         }
 
         private async Task UpdateHandler(ITelegramBotClient client, Update update, CancellationToken token)
@@ -379,14 +383,20 @@ namespace SlayTheBot
                     [("Телеграм Звёзды")]
                         });
                 }
-                else if(messageData == "Перевод на карту")
+                else if (messageData == "Перевод на карту")
                 {
                     int code = new Random().Next(1000, 9999);
                     state.MessageCode = code;
-                    await bot.SendMessage(chatId, $"Номер карты: 9112 3800 5670 1230 (Белорусбанк)\n\nВ комментарии к платежу укажите этот одноразовый код: {code}\n\nПосле оплаты отправьте скриншот успешного перевода денег в лс @VERT1GO51 и нажмите кнопку ниже. Дальше ожидайте подтверждения. Спасибо." 
-                        , replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Оплатил и отправил скриншот!")));
+                    await bot.SendMessage(chatId,
+                        $"Номер карты: <span class=\"tg-spoiler\">9112 3800 5670 1230</span> (Белорусбанк)\n\n" +
+                        $"В комментарии к платежу укажите этот одноразовый код: {code}\n\n" +
+                        "После оплаты отправьте скриншот успешного перевода денег в лс @VERT1GO51 и нажмите кнопку ниже. Дальше ожидайте подтверждения. Спасибо.",
+                        replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Оплатил и отправил скриншот!")),
+                        protectContent: true,
+                        parseMode: ParseMode.Html); 
                 }
-                else if(messageData == "ЕРИП")
+
+                else if (messageData == "ЕРИП")
                 {
                     await bot.SendMessage(chatId, "Извините, на данный момент этот способ оплаты не доступен", replyMarkup: new InlineKeyboardButton[][] {
                         [("Перевод на карту"), ("ЕРИП")],
@@ -400,12 +410,24 @@ namespace SlayTheBot
                 else if (messageData == "Оплатил и отправил скриншот!")
                 {
                     await bot.SendMessage(chatId, "Спасибо! Ожидайте подтверждения админа! \nЕсть вопросы - /support ;)");
-                    await bot.SendMessage(OwnerId, $"new user: {chatId} is maybe waiting for the confirmation for tournament\n message code: {state.MessageCode}", replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Confirm payment")));
+                    confirmMessage = await bot.SendMessage(OwnerId, $"{chatId}", replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Confirm payment")));
+                    await bot.SendMessage(OwnerId, $"code: {state.MessageCode}", replyParameters: confirmMessage.Id);
                 }
                 else if (messageData == "Confirm payment")
                 {
-                    await bot.SendMessage(chatId, "send the id to confirm");
-                    state.isWaitingForUserIdToConfirm = true;
+                    //await bot.SendMessage(chatId, "send the id to confirm");
+                    //state.isWaitingForUserIdToConfirm = true;
+                    var idToConfirm = Convert.ToInt64(confirmMessage.Text);
+                    await bot.SendMessage(idToConfirm, $"✅Ваше участие подтверждено админом @{cbQuery.From.Username}\nБудьте доступны во время турнира.\nСпасибо. Удачи!");
+                    foreach(var i in _tournaments)
+                    {
+                        if(i.tId == _states[idToConfirm].TIDToReg)
+                        {
+                            i._participants.Add(idToConfirm);
+                            i.availableSlots--;
+                            await bot.SendMessage(chatId, $"Вы подтвердили участие {idToConfirm} в турнире {_states[idToConfirm].TIDToReg}");  
+                        }
+                    }
                 }
                 }
 
@@ -456,7 +478,7 @@ namespace SlayTheBot
                         break;
                     }
 
-                case { Message.SuccessfulPayment: { } payment }:  // ← ВОТ ЭТА ЧАСТЬ ОБЯЗАТЕЛЬНА!
+                case { Message.SuccessfulPayment: { } payment }:
                     {
                         if (payment.InvoicePayload.StartsWith("tournament:"))
                         {

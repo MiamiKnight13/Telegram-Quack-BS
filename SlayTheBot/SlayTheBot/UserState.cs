@@ -10,7 +10,6 @@ class UserState
     //available for users
     public bool isAdmin {  get; set; }
     public bool isWaitingForSupportMessage { get; set; }
-    public Tournament TournamentToReg {  get; set; }
     public int TIDToReg { get; set; }
 
     //not available for users
