@@ -34,6 +34,7 @@ namespace SlayTheBot
         public int tMaxParticipants;
         public int tPrice;
         public int tStarPrice;
+        public string photoUrl;
         public int tId;
 
         public string UsersFilePath = "tournaments.json";
@@ -167,13 +168,20 @@ namespace SlayTheBot
                     state.isWaitingForTournamentPrice = false;
                     tPrice = Convert.ToInt32(text);
                     state.isWaitingForTournamentStarPrice = true;
-                    await bot.SendMessage(chatId, "great! Now send star price");
+                    await bot.SendMessage(chatId, "set star price");
                 }
                 else if(text != null && state.isWaitingForTournamentStarPrice)
                 {
                     state.isWaitingForTournamentStarPrice = false;
                     state.TournamentStarPrice = text;
                     tStarPrice = Convert.ToInt32(text);
+                    state.isWaitingForPhotoUrl = true;
+                    await bot.SendMessage(chatId, "send the tournament preview");
+                }
+                else if(text != null && state.isWaitingForPhotoUrl)
+                {
+                    state.isWaitingForPhotoUrl = false;
+                    photoUrl = text;
                     state.isWaitingForTournamentId = true;
                     await bot.SendMessage(chatId, "set the tournament id");
                 }
@@ -181,14 +189,14 @@ namespace SlayTheBot
                 {
                     state.isWaitingForTournamentId = false;
                     tId = Convert.ToInt32(text);
-                    Tournament tournament = new Tournament(tName, tMaxParticipants, tPrice, tStarPrice, tId);
+                    Tournament tournament = new Tournament(tName, tMaxParticipants, tPrice, tStarPrice, photoUrl, tId);
                     _tournaments.Add(tournament);
                     await bot.SendMessage(chatId, "Great! The tournament has been created.\n/create_T");
                     SaveTournaments();
                 }
 
 
-                    //TOURNAMENT MANAGEMENT
+                //TOURNAMENT MANAGEMENT
                 else if (text != null && state.isWaitingForTIdToCheckList)
                 {
                     state.isWaitingForTIdToCheckList = false;
@@ -220,7 +228,7 @@ namespace SlayTheBot
                 }
 
 
-                    //USER MANAGEMENT
+                //USER MANAGEMENT
                 else if (text != null && state.isWaitingForIdToAddInTournament)
                 {
                     state.isWaitingForIdToAddInTournament = false;
@@ -316,7 +324,7 @@ namespace SlayTheBot
                 else if (text != null && state.isWaitingForSupportMessage)
                 {
                     state.isWaitingForSupportMessage = false;
-                    await bot.SendMessage(OwnerId, $"new support message from {update.Message.From}:\n{text}");
+                    await bot.SendMessage(OwnerId, $"new support message from {update.Message?.From}:\n{text}");
                     await bot.SendMessage(chatId, $"Вы только что отрпавили '{text}' в поддержку.\n/support");
                 }
 
@@ -362,7 +370,7 @@ namespace SlayTheBot
                         {
                             foreach (var i in _tournaments)
                             {
-                                await bot.SendMessage(chatId, $"{i.name}\nМаксимальное число участников: {i.maxParticipants}\nСвободных мест: {i.availableSlots}\nЦена: {i.price} Бел. руб.\nЦена в звёздах: {i.starPrice}\nID турнира: {i.tId}", replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Зарегистрироваться", $"reg:{i.tId}")));
+                                await bot.SendPhoto(chatId,  photo: i.photoUrl, caption: $"{i.name}\nМаксимальное число участников: {i.maxParticipants}\nСвободных мест: {i.availableSlots}\nЦена: {i.price} Бел. руб.\nЦена в звёздах: {i.starPrice}\nID турнира: {i.tId}", replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("Зарегистрироваться", $"reg:{i.tId}")));
                             }
                         }
                         else
@@ -415,8 +423,6 @@ namespace SlayTheBot
                 }
                 else if (messageData == "Confirm payment")
                 {
-                    //await bot.SendMessage(chatId, "send the id to confirm");
-                    //state.isWaitingForUserIdToConfirm = true;
                     var idToConfirm = Convert.ToInt64(confirmMessage.Text);
                     await bot.SendMessage(idToConfirm, $"✅Ваше участие подтверждено админом @{cbQuery.From.Username}\nБудьте доступны во время турнира.\nСпасибо. Удачи!");
                     foreach(var i in _tournaments)
@@ -506,15 +512,17 @@ namespace SlayTheBot
         public int availableSlots { get; set; }
         public int price {  get; set; }
         public int starPrice { get; set; }
+        public string photoUrl { get; set; }
         public int tId { get; set; }
         public List<long?> _participants { get; set; } = new List<long?>();
 
-        public Tournament(string name, int maxParticipants, int price, int starPrice, int tId)
+        public Tournament(string name, int maxParticipants, int price, int starPrice, string photoUrl,int tId)
         {
             this.name = name;
             this.maxParticipants = maxParticipants;
             this.price = price;
             this.starPrice = starPrice;
+            this.photoUrl = photoUrl;
             this.tId = tId;
             availableSlots = maxParticipants;
         }

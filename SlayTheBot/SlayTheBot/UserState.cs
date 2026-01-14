@@ -18,6 +18,8 @@ class UserState
     public bool isWaitingForTournamentPrice { get; set; }
     public bool isWaitingForTournamentStarPrice { get; set; }
     public string TournamentStarPrice { get; set;}
+    public bool isWaitingForPhotoUrl { get; set; }
+    public string PhotoUrl { get; set; }
     public bool isWaitingForTournamentId { get; set; }
     public bool isWaitingForTIDToAddPar { get; set; }
     public int TIdToAddPar { get; set; }
