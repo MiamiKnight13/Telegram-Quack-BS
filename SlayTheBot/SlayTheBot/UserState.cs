@@ -15,6 +15,7 @@ class UserState
     //not available for users
     public bool isWaitingForTournamentName { get; set; }
     public bool isWaitingForMaxParticipants { get; set; }
+    public bool isWaitingForTournamentTime { get; set; }
     public bool isWaitingForTournamentPrice { get; set; }
     public bool isWaitingForTournamentStarPrice { get; set; }
     public string TournamentStarPrice { get; set;}
@@ -35,4 +36,6 @@ class UserState
     public bool isWaitingForTIdToRemoveUser { get; set; }
     public int TIdToRemoveUser { get; set; }
     public bool isWaitingForUserIdToConfirm {  get; set; }
+
+    public bool isWaitingForIdToPromote { get; set; }
 }
